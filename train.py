@@ -11,13 +11,14 @@ import sys
 import argparse
 import time
 from datetime import datetime
-
+from tqdm import tqdm
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+from torchvision import datasets
 
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -30,19 +31,20 @@ def train(epoch):
 
     start = time.time()
     net.train()
-    for batch_index, (images, labels) in enumerate(cifar100_training_loader):
+    for batch_index, (images, labels) in enumerate(training_loader):
 
         if args.gpu:
             labels = labels.cuda()
             images = images.cuda()
 
         optimizer.zero_grad()
+
         outputs = net(images)
         loss = loss_function(outputs, labels)
         loss.backward()
         optimizer.step()
 
-        n_iter = (epoch - 1) * len(cifar100_training_loader) + batch_index + 1
+        n_iter = (epoch - 1) * len(training_loader) + batch_index + 1
 
         last_layer = list(net.children())[-1]
         for name, para in last_layer.named_parameters():
@@ -56,7 +58,7 @@ def train(epoch):
             optimizer.param_groups[0]['lr'],
             epoch=epoch,
             trained_samples=batch_index * args.b + len(images),
-            total_samples=len(cifar100_training_loader.dataset)
+            total_samples=len(training_loader.dataset)
         ))
 
         #update training loss for each iteration
@@ -83,7 +85,7 @@ def eval_training(epoch=0, tb=True):
     test_loss = 0.0 # cost function error
     correct = 0.0
 
-    for (images, labels) in cifar100_test_loader:
+    for (images, labels) in test_loader:
 
         if args.gpu:
             images = images.cuda()
@@ -103,18 +105,18 @@ def eval_training(epoch=0, tb=True):
     print('Evaluating Network.....')
     print('Test set: Epoch: {}, Average loss: {:.4f}, Accuracy: {:.4f}, Time consumed:{:.2f}s'.format(
         epoch,
-        test_loss / len(cifar100_test_loader.dataset),
-        correct.float() / len(cifar100_test_loader.dataset),
+        test_loss / len(test_loader.dataset),
+        correct.float() / len(test_loader.dataset),
         finish - start
     ))
     print()
 
     #add informations to tensorboard
     if tb:
-        writer.add_scalar('Test/Average loss', test_loss / len(cifar100_test_loader.dataset), epoch)
-        writer.add_scalar('Test/Accuracy', correct.float() / len(cifar100_test_loader.dataset), epoch)
+        writer.add_scalar('Test/Aver    age loss', test_loss / len(test_loader.dataset), epoch)
+        writer.add_scalar('Test/Accuracy', correct.float() / len(test_loader.dataset), epoch)
 
-    return correct.float() / len(cifar100_test_loader.dataset)
+    return correct.float() / len(test_loader.dataset)
 
 if __name__ == '__main__':
 
@@ -126,22 +128,40 @@ if __name__ == '__main__':
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-resume', action='store_true', default=False, help='resume training')
     args = parser.parse_args()
+    args.gpu=torch.cuda.is_available()
+    # args.b=256
+    num_workers=8
 
     net = get_network(args)
 
     #data preprocessing:
-    cifar100_training_loader = get_training_dataloader(
+    # cifar100_training_loader = get_training_dataloader(
+    #     settings.CIFAR100_TRAIN_MEAN,
+    #     settings.CIFAR100_TRAIN_STD,
+    #     num_workers=4,
+    #     batch_size=args.b,
+    #     shuffle=True
+    # )
+
+    # cifar100_test_loader = get_test_dataloader(
+    #     settings.CIFAR100_TRAIN_MEAN,
+    #     settings.CIFAR100_TRAIN_STD,
+    #     num_workers=4,
+    #     batch_size=args.b,
+    #     shuffle=True
+    # )
+    training_loader = get_training_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
-        num_workers=4,
+        num_workers=num_workers,
         batch_size=args.b,
         shuffle=True
     )
 
-    cifar100_test_loader = get_test_dataloader(
+    test_loader = get_test_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
-        num_workers=4,
+        num_workers=num_workers,
         batch_size=args.b,
         shuffle=True
     )
@@ -149,7 +169,7 @@ if __name__ == '__main__':
     loss_function = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
     train_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=settings.MILESTONES, gamma=0.2) #learning rate decay
-    iter_per_epoch = len(cifar100_training_loader)
+    iter_per_epoch = len(training_loader)
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
     if args.resume:
@@ -201,7 +221,7 @@ if __name__ == '__main__':
         resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
 
 
-    for epoch in range(1, settings.EPOCH + 1):
+    for epoch in tqdm(range(1, settings.EPOCH + 1)):
         if epoch > args.warm:
             train_scheduler.step(epoch)
 
