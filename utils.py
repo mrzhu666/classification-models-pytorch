@@ -188,7 +188,7 @@ def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=Tru
     ])
     #cifar100_training = CIFAR100Train(path, transform=transform_train)
     # training = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
-    training = datasets.ImageFolder(config['server_path']+config['dataset_path']+'train',transform=transform_train)  # 数据加载太慢？
+    training = datasets.ImageFolder(config['dataset_path']+'train',transform=transform_train)  # 数据加载太慢？
     training_loader = DataLoader(
         training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
@@ -212,7 +212,7 @@ def get_test_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
     ])
     #cifar100_test = CIFAR100Test(path, transform=transform_test)
     # test = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
-    test = datasets.ImageFolder(config['server_path']+config['dataset_path']+'val',transform=transform_test)
+    test = datasets.ImageFolder(config['dataset_path']+'val',transform=transform_test)
     test_loader = DataLoader(
         test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 

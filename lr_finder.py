@@ -117,3 +117,4 @@ if __name__ == '__main__':
     ax.xaxis.set_major_formatter(plt.FormatStrFormatter('%.0e'))
 
     fig.savefig('result.jpg')
+

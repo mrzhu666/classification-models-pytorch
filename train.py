@@ -47,7 +47,7 @@ def train(epoch):
         n_iter = (epoch - 1) * len(training_loader) + batch_index + 1
 
         last_layer = list(net.children())[-1]
-        for name, para in last_layer.named_parameters():
+        for name, para in last_layer.named_parameters():    
             if 'weight' in name:
                 writer.add_scalar('LastLayerGradients/grad_norm2_weights', para.grad.norm(), n_iter)
             if 'bias' in name:
@@ -112,9 +112,9 @@ def eval_training(epoch=0, tb=True):
     print()
 
     #add informations to tensorboard
-    if tb:
-        writer.add_scalar('Test/Aver    age loss', test_loss / len(test_loader.dataset), epoch)
-        writer.add_scalar('Test/Accuracy', correct.float() / len(test_loader.dataset), epoch)
+
+    writer.add_scalar('Test/Aver Age Loss', test_loss / len(test_loader.dataset), epoch)
+    writer.add_scalar('Test/Accuracy', correct.float() / len(test_loader.dataset), epoch)
 
     return correct.float() / len(test_loader.dataset)
 
@@ -200,6 +200,7 @@ if __name__ == '__main__':
         os.makedirs(checkpoint_path)
     checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
 
+    best_epoch = 0
     best_acc = 0.0
     if args.resume:
         best_weights = best_acc_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
@@ -233,16 +234,22 @@ if __name__ == '__main__':
         acc = eval_training(epoch)
 
         #start to save best performance model after learning rate decay to 0.01
-        if epoch > settings.MILESTONES[1] and best_acc < acc:
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best')
-            print('saving weights file to {}'.format(weights_path))
-            torch.save(net.state_dict(), weights_path)
+        # if epoch > settings.MILESTONES[1] and best_acc < acc:
+        if best_acc < acc:
+            # weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='best')
+            # print('saving weights file to {}'.format(weights_path))
+            # torch.save(net.state_dict(), weights_path)
             best_acc = acc
-            continue
+            best_epoch = epoch
+            # continue
 
         if not epoch % settings.SAVE_EPOCH:
             weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular')
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
 
+        print("Best acc:{:.4f}, Best epoch:{:d}".format(\
+            best_acc,
+            best_epoch
+            ))
     writer.close()
