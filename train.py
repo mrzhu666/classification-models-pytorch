@@ -27,6 +27,9 @@ from conf import settings
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
+if torch.cuda.is_available():
+    torch.cuda.set_device(1)
+
 def train(epoch):
 
     start = time.time()
