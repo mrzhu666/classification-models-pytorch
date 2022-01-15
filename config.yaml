@@ -8,5 +8,5 @@ user:
 
 
 # dataset_path: CRC-HE/NCT-CRC-HE-100K/
-dataset_path: /home/student/mrzhu/data/CRC-HE/
+dataset_path: /home/student/mrzhu/data/CRC-HE-GAN/
 label: 

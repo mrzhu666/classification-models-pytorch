@@ -6,8 +6,8 @@ from shutil import copyfile
 from setting import config
 
 # 某一类图片抽取的图片数量
-
 # 每一类拿取多少图片
+
 N=1000
 gan=''
 data_path=config['server_path']+'CRC-HE/'

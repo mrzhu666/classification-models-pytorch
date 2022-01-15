@@ -12,7 +12,8 @@ from sklearn.model_selection import train_test_split
 from setting import config
 
 # 将图片合并存储为array
-# 要估计内存大小,图片太多不能直接加载到内存
+# 要估计内存大小,图片太多不能直接加载到内存。
+# 先废除不用
 
 folders=os.listdir(config['server_path']+config['dataset_path'])
 classes = sorted(entry.name for entry in os.scandir(config['server_path']+config['dataset_path']) if entry.is_dir())
