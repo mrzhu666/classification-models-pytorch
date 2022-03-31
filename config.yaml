@@ -3,10 +3,9 @@ user:
   mrzhu:
     server_path: /home/mrzhu/data/
   student:
-    server_path: /mnt/sdb1/student/mrzhu/data/
+    server_path: /home/student/mrzhu/data
     # server_path: /home/student/data/
 
 
-# dataset_path: CRC-HE/NCT-CRC-HE-100K/
 dataset_path: /home/student/mrzhu/data/CRC-HE/
 label: 
