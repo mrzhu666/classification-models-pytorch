@@ -84,11 +84,11 @@ def eval_training(epoch=0, tb=True):
 
     start = time.time()
     net.eval()
-
+    print('eval_train')
     test_loss = 0.0 # cost function error
     correct = 0.0
 
-    for (images, labels) in test_loader:
+    for batch_index, (images, labels) in enumerate(test_loader):
 
         if args.gpu:
             images = images.cuda()
@@ -100,6 +100,12 @@ def eval_training(epoch=0, tb=True):
         test_loss += loss.item()
         _, preds = outputs.max(1)
         correct += preds.eq(labels).sum()
+
+        print('Test Epoch: {epoch} [{trained_samples}/{total_samples}]\t'.format(
+            epoch=epoch,
+            trained_samples=batch_index * args.b + len(images),
+            total_samples=len(test_loader.dataset)
+        ))
 
     finish = time.time()
     if args.gpu:
@@ -131,35 +137,23 @@ if __name__ == '__main__':
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-resume', action='store_true', default=False, help='resume training')
+    parser.add_argument('-gan_test', action='store_true', default=False, help='gan数据集测试')
+
     args = parser.parse_args()
     args.gpu=torch.cuda.is_available()
     # args.b=256
-    num_workers=8
+    # 线程数量
+    num_workers=3
 
     net = get_network(args)
 
-    #data preprocessing:
-    # cifar100_training_loader = get_training_dataloader(
-    #     settings.CIFAR100_TRAIN_MEAN,
-    #     settings.CIFAR100_TRAIN_STD,
-    #     num_workers=4,
-    #     batch_size=args.b,
-    #     shuffle=True
-    # )
-
-    # cifar100_test_loader = get_test_dataloader(
-    #     settings.CIFAR100_TRAIN_MEAN,
-    #     settings.CIFAR100_TRAIN_STD,
-    #     num_workers=4,
-    #     batch_size=args.b,
-    #     shuffle=True
-    # )
     training_loader = get_training_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
         settings.CIFAR100_TRAIN_STD,
         num_workers=num_workers,
         batch_size=args.b,
-        shuffle=True
+        shuffle=True,
+        gan_test=args.gan_test
     )
 
     test_loader = get_test_dataloader(
@@ -167,7 +161,8 @@ if __name__ == '__main__':
         settings.CIFAR100_TRAIN_STD,
         num_workers=num_workers,
         batch_size=args.b,
-        shuffle=True
+        shuffle=True,
+        gan_test=args.gan_test
     )
 
     loss_function = nn.CrossEntropyLoss()

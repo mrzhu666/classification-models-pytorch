@@ -164,7 +164,7 @@ def get_network(args):
     return net
 
 
-def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
+def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True, gan_test=False):
     """ return training dataloader
     Args:
         mean: mean of cifar100 training dataset
@@ -173,6 +173,7 @@ def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=Tru
         batch_size: dataloader batchsize
         num_workers: dataloader num_works
         shuffle: whether to shuffle
+        gan_test: gan数据集测试
     Returns: train_data_loader:torch dataloader object
     """
 
@@ -188,13 +189,17 @@ def get_training_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=Tru
     ])
     #cifar100_training = CIFAR100Train(path, transform=transform_train)
     # training = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
-    training = datasets.ImageFolder(config['dataset_path']+'train',transform=transform_train)  # 数据加载太慢？
+    if not gan_test:
+        training = datasets.ImageFolder(config['dataset_path']+'train',transform=transform_train)  # 数据加载太慢？
+    else:
+        training = datasets.ImageFolder(config['dataset_path_gan']+'train',transform=transform_train)  # 数据加载太慢？
+    
     training_loader = DataLoader(
         training, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 
     return training_loader
 
-def get_test_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
+def get_test_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True, gan_test=False):
     """ return training dataloader
     Args:
         mean: mean of cifar100 test dataset
@@ -212,7 +217,10 @@ def get_test_dataloader(mean, std, batch_size=16, num_workers=2, shuffle=True):
     ])
     #cifar100_test = CIFAR100Test(path, transform=transform_test)
     # test = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
-    test = datasets.ImageFolder(config['dataset_path']+'val',transform=transform_test)
+    if not gan_test:
+        test = datasets.ImageFolder(config['dataset_path']+'val',transform=transform_test)
+    else:
+        test = datasets.ImageFolder(config['dataset_path_gan']+'val',transform=transform_test)
     test_loader = DataLoader(
         test, shuffle=shuffle, num_workers=num_workers, batch_size=batch_size)
 

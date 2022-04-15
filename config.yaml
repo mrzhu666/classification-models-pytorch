@@ -2,10 +2,11 @@
 user:
   mrzhu:
     server_path: /home/mrzhu/data/
+    dataset_path: /home/mrzhu/data/CRC-HE/
+    dataset_path_gan: /home/mrzhu/data/CRC-HE-GAN/
   student:
-    server_path: /home/student/mrzhu/data
+    server_path: /home/student/mrzhu/data/
     # server_path: /home/student/data/
 
-
-dataset_path: /home/student/mrzhu/data/CRC-HE/
-label: 
+    # 训练和验证文件夹，该文件夹下有train和val文件夹
+    dataset_path: /home/student/mrzhu/data/CRC-HE/
