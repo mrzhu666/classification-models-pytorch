@@ -6,9 +6,11 @@
 author baiyu
 """
 
+import imp
 import os
 import sys
 import argparse
+import shutil
 import time
 from datetime import datetime
 from tqdm import tqdm
@@ -24,6 +26,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from conf import settings
+from setting import config
 from utils import get_network, get_training_dataloader, get_test_dataloader, WarmUpLR, \
     most_recent_folder, most_recent_weights, last_epoch, best_acc_weights
 
@@ -119,6 +122,7 @@ def eval_training(epoch=0, tb=True):
         finish - start
     ))
     print()
+    
 
     #add informations to tensorboard
 
@@ -127,13 +131,32 @@ def eval_training(epoch=0, tb=True):
 
     return correct.float() / len(test_loader.dataset)
 
+# CRC-HE和CRC-HE-TRAIN 融合到CRC-HE-GAN文件夹
+def folder_fusion():    
+    CRC_HE=os.path.join(config['server_path'],'CRC-HE')  # 原本的样本
+    CRC_HE_TRAIN=os.path.join(config['server_path'],'CRC-HE-TRAIN')  # GAN生成的样本
+    CRC_HE_GAN=os.path.join(config['server_path'],'CRC-HE-GAN')
+    if os.path.exists(CRC_HE_GAN):
+        shutil.rmtree(CRC_HE_GAN)
+
+    shutil.copytree(CRC_HE,CRC_HE_GAN)
+
+    # CRC_HE_TRAIN融合到CRC_HE_GAN
+    folders=os.listdir(CRC_HE_TRAIN)
+    for folder in folders:
+        
+        files=os.listdir(os.path.join(CRC_HE_TRAIN,folder))
+        for file in files:
+            shutil.copy(os.path.join(CRC_HE_TRAIN,folder,file),os.path.join(CRC_HE_GAN,'train',folder,file))
+    
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-net', type=str, required=True, help='net type')
     parser.add_argument('-gpu', action='store_true', default=False, help='use gpu or not')
-    # parser.add_argument('-b', type=int, default=128, help='batch size for dataloader')
-    parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')
+    parser.add_argument('-b', type=int, default=64, help='batch size for dataloader')  # 128
     parser.add_argument('-warm', type=int, default=1, help='warm up training phase')
     parser.add_argument('-lr', type=float, default=0.1, help='initial learning rate')
     parser.add_argument('-resume', action='store_true', default=False, help='resume training')
@@ -143,9 +166,12 @@ if __name__ == '__main__':
     args.gpu=torch.cuda.is_available()
     # args.b=256
     # 线程数量
-    num_workers=3
+    num_workers=4
 
     net = get_network(args)
+
+    if args.gan_test:
+        folder_fusion()
 
     training_loader = get_training_dataloader(
         settings.CIFAR100_TRAIN_MEAN,
@@ -172,14 +198,15 @@ if __name__ == '__main__':
     warmup_scheduler = WarmUpLR(optimizer, iter_per_epoch * args.warm)
 
     if args.resume:
-        recent_folder = most_recent_folder(os.path.join(settings.CHECKPOINT_PATH, args.net), fmt=settings.DATE_FORMAT)
+        recent_folder = most_recent_folder(os.path.join(config['checkpoint_path'], args.net), fmt=settings.DATE_FORMAT)
         if not recent_folder:
             raise Exception('no recent folder were found')
 
-        checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder)
+        checkpoint_path = os.path.join(config['checkpoint_path'], args.net, recent_folder)
 
     else:
-        checkpoint_path = os.path.join(settings.CHECKPOINT_PATH, args.net, settings.TIME_NOW)
+        checkpoint_path = os.path.join(config['checkpoint_path'], args.net, settings.TIME_NOW)
+
 
     #use tensorboard
     if not os.path.exists(settings.LOG_DIR):
@@ -197,28 +224,28 @@ if __name__ == '__main__':
     #create checkpoint folder to save model
     if not os.path.exists(checkpoint_path):
         os.makedirs(checkpoint_path)
-    checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{type}.pth')
+    checkpoint_path = os.path.join(checkpoint_path, '{net}-{epoch}-{acc}.pth')
 
     best_epoch = 0
     best_acc = 0.0
     if args.resume:
-        best_weights = best_acc_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
+        best_weights = best_acc_weights(os.path.join(config['checkpoint_path'], args.net, recent_folder))
         if best_weights:
-            weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, best_weights)
+            weights_path = os.path.join(config['checkpoint_path'], args.net, recent_folder, best_weights)
             print('found best acc weights file:{}'.format(weights_path))
             print('load best training file to test acc...')
             net.load_state_dict(torch.load(weights_path))
             best_acc = eval_training(tb=False)
             print('best acc is {:0.2f}'.format(best_acc))
 
-        recent_weights_file = most_recent_weights(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
+        recent_weights_file = most_recent_weights(os.path.join(config['checkpoint_path'], args.net, recent_folder))
         if not recent_weights_file:
             raise Exception('no recent weights file were found')
-        weights_path = os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder, recent_weights_file)
+        weights_path = os.path.join(config['checkpoint_path'], args.net, recent_folder, recent_weights_file)
         print('loading weights file {} to resume training.....'.format(weights_path))
         net.load_state_dict(torch.load(weights_path))
 
-        resume_epoch = last_epoch(os.path.join(settings.CHECKPOINT_PATH, args.net, recent_folder))
+        resume_epoch = last_epoch(os.path.join(config['checkpoint_path'], args.net, recent_folder))
 
 
     for epoch in tqdm(range(1, settings.EPOCH + 1)):
@@ -241,11 +268,14 @@ if __name__ == '__main__':
             best_acc = acc
             best_epoch = epoch
             # continue
-
-        if not epoch % settings.SAVE_EPOCH:
-            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular')
+            weights_path = checkpoint_path.format(net=args.net, epoch=epoch, acc=acc)
             print('saving weights file to {}'.format(weights_path))
             torch.save(net.state_dict(), weights_path)
+
+        # if not epoch % settings.SAVE_EPOCH:
+        #     weights_path = checkpoint_path.format(net=args.net, epoch=epoch, type='regular')
+        #     print('saving weights file to {}'.format(weights_path))
+        #     torch.save(net.state_dict(), weights_path)
 
         print("Best acc:{:.4f}, Best epoch:{:d}".format(\
             best_acc,

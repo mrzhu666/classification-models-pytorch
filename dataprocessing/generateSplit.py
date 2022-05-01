@@ -28,9 +28,9 @@ if os.path.exists(os.path.join(data_path,gan)):
     os.makedirs(os.path.join(data_path,gan))
 
 # 训练集中每一类图片抽取的图片数量
-N_TRAIN=10 
+N_TRAIN=1000
 # 测试集中每一类图片抽取的图片数量
-N_TEST=10 
+N_TEST=250
 
 
 # NCT_path=data_path+'NCT-CRC-HE-100K-PNG/'
@@ -49,7 +49,7 @@ for fold in tqdm(folders):
     imgs=os.listdir(os.path.join(NCT_path,fold))
     if not os.path.exists(os.path.join(NCT_target_path,fold)):
         os.makedirs(os.path.join(NCT_target_path,fold))
-    sleep(1)
+    # sleep(1)
     for i,img in tqdm(enumerate(imgs)):
         if i==N_TRAIN:
             break
@@ -70,7 +70,7 @@ for fold in tqdm(folders):
     imgs=os.listdir(os.path.join(NCT_path,fold))
     if not os.path.exists(os.path.join(NCT_target_path,fold)):
         os.makedirs(os.path.join(NCT_target_path,fold))
-    sleep(1)
+    # sleep(1)
     for i,img in tqdm(enumerate(imgs)):
         if i==N_TEST:
             break
